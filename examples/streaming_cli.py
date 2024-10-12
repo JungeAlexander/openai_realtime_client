@@ -5,6 +5,9 @@ from pynput import keyboard
 from openai_realtime_client import RealtimeClient, AudioHandler, InputHandler, TurnDetectionMode
 from llama_index.core.tools import FunctionTool
 
+from dotenv import load_dotenv
+
+
 # Add your own tools here!
 # NOTE: FunctionTool parses the docstring to get description, the tool name is the function name
 def get_phone_number(name: str) -> str:
@@ -25,6 +28,8 @@ async def main():
     
     client = RealtimeClient(
         api_key=os.environ.get("OPENAI_API_KEY"),
+        base_url=os.environ.get("AZURE_OPENAI_ENDPOINT"),
+        model=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
         on_text_delta=lambda text: print(f"\nAssistant: {text}", end="", flush=True),
         on_audio_delta=lambda audio: audio_handler.play_audio(audio),
         on_interrupt=lambda: audio_handler.stop_playback_immediately(),
@@ -63,5 +68,6 @@ async def main():
         await client.close()
 
 if __name__ == "__main__":
+    load_dotenv()
     print("Starting Realtime API CLI with Server VAD...")
     asyncio.run(main())
