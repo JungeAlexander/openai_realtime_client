@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 import websockets
 import json
 import base64
@@ -50,7 +51,8 @@ class RealtimeClient:
     def __init__(
         self, 
         api_key: str,
-        model: str = "gpt-4o-realtime-preview-2024-10-01",
+        base_url: str,
+        model: str,
         voice: str = "alloy",
         instructions: str = "You are a helpful assistant",
         turn_detection_mode: TurnDetectionMode = TurnDetectionMode.MANUAL,
@@ -68,9 +70,10 @@ class RealtimeClient:
         self.on_audio_delta = on_audio_delta
         self.on_interrupt = on_interrupt
         self.instructions = instructions
-        self.base_url = "wss://api.openai.com/v1/realtime"
+        self.base_url = base_url
         self.extra_event_handlers = extra_event_handlers or {}
         self.turn_detection_mode = turn_detection_mode
+        self.request_id = uuid.uuid4()
 
         tools = tools or []
         for i, tool in enumerate(tools):
@@ -81,14 +84,19 @@ class RealtimeClient:
         self._current_response_idcurrent_response_id = None
         self._current_item_id = None
         self._is_responding = False
+
+    def _user_agent(self):
+        return "ms-rtclient-0.4.3"
+    
+    def _get_auth(self):
+            return {"api-key": self.api_key}
         
     async def connect(self) -> None:
         """Establish WebSocket connection with the Realtime API."""
-        url = f"{self.base_url}?model={self.model}"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "OpenAI-Beta": "realtime=v1"
-        }
+        url = f"{self.base_url}&deployment={self.model}"
+        auth_headers = self._get_auth()
+        headers = {"x-ms-client-request-id": str(self.request_id), "User-Agent": self._user_agent(), **auth_headers}
+
         
         self.ws = await websockets.connect(url, extra_headers=headers)
         
